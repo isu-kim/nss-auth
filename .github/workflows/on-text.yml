@@ -10,20 +10,21 @@ on:
 
 permissions:
   contents: write
-  issues: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: on-text
   cancel-in-progress: false
 
 jobs:
-  run:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Update README
+      - name: Generate README and site
         env:
           MESSAGE: ${{ github.event.inputs.message }}
         run: |
@@ -40,20 +41,53 @@ jobs:
           </div>
           EOF
 
-      - name: Commit and push
+          mkdir -p site
+          cat > site/index.html <<EOF
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Latest message</title>
+            <style>
+              html, body { height: 100%; margin: 0; }
+              body {
+                display: flex; flex-direction: column;
+                align-items: center; justify-content: center;
+                font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+                background: #111; color: #fff; text-align: center;
+              }
+              h1 { font-size: 4rem; margin: 0 0 1rem; word-break: break-all; }
+              small { color: #888; }
+            </style>
+          </head>
+          <body>
+            <h1>$SAFE</h1>
+            <small>Last updated: $NOW</small>
+          </body>
+          </html>
+          EOF
+
+      - name: Commit and push README
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add README.md
-          git commit -m "Update README from iPhone text"
+          git diff --cached --quiet || git commit -m "Update README from iPhone text"
           git push
 
-      - name: Create issue
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MESSAGE: ${{ github.event.inputs.message }}
-        run: |
-          gh issue create \
-            --repo "${{ github.repository }}" \
-            --title "Text received: ${MESSAGE:0:50}" \
-            --body "$MESSAGE"
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
