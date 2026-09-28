@@ -1,0 +1,16 @@
+name: On Text
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Text received on iPhone"
+        required: false
+        default: ""
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Do something
+        run: echo "Got message: ${{ github.event.inputs.message }}"
