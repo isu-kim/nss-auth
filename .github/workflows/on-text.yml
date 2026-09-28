@@ -8,12 +8,19 @@ on:
         required: false
         default: ""
 
+permissions:
+  issues: write
+
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - name: Do something
+      - name: Create issue
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MESSAGE: ${{ github.event.inputs.message }}
         run: |
-          echo "Got message: $MESSAGE"
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "Text received: ${MESSAGE:0:50}" \
+            --body "$MESSAGE"
