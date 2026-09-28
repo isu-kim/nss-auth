@@ -9,12 +9,45 @@ on:
         default: ""
 
 permissions:
+  contents: write
   issues: write
+
+concurrency:
+  group: on-text
+  cancel-in-progress: false
 
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update README
+        env:
+          MESSAGE: ${{ github.event.inputs.message }}
+        run: |
+          SAFE=$(printf '%s' "$MESSAGE" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')
+          NOW=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')
+
+          cat > README.md <<EOF
+          <div align="center">
+
+          <h1 align="center">$SAFE</h1>
+
+          <sub>Last updated: $NOW</sub>
+
+          </div>
+          EOF
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "Update README from iPhone text"
+          git push
+
       - name: Create issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
